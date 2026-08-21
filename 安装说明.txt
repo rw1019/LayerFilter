@@ -1,0 +1,13 @@
+图层筛选 CEP 插件
+
+安装：
+1. 将整个 LayerFilter 文件夹复制到：
+   C:\Program Files\Adobe\Adobe Photoshop 2025\Required\CEP\extensions
+2. 重启 Photoshop 2025。
+3. 打开“窗口 > 扩展功能（旧版）> 图层筛选”。
+
+插件面板可以停靠在 Photoshop 侧边栏，并会自动记住上次设置。
+
+如果菜单中没有“扩展功能（旧版）”，请确认复制的是整个 LayerFilter 文件夹，
+且最终路径为：
+C:\Program Files\Adobe\Adobe Photoshop 2025\Required\CEP\extensions\LayerFilter\CSXS\manifest.xml

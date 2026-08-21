@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图层筛选</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <main class="panel">
+        <header class="panel-header">
+            <img class="panel-icon" src="icons/IconDark@2X.png" alt="">
+            <h1>图层筛选</h1>
+        </header>
+
+        <fieldset>
+            <legend>选择依据</legend>
+            <label class="option"><input type="radio" name="mode" value="price"> <span>价格文字（含 ￥ 或 ¥）</span></label>
+            <label class="option"><input type="radio" name="mode" value="style"> <span>与当前文字图层样式相同</span></label>
+            <label class="option"><input type="radio" name="mode" value="content"> <span>文字内容匹配</span></label>
+            <label class="option"><input type="radio" name="mode" value="name"> <span>任意图层名称包含</span></label>
+            <label class="option"><input type="radio" name="mode" value="group"> <span>图层组名称包含</span></label>
+        </fieldset>
+
+        <section class="query-row">
+            <label for="query">关键词</label>
+            <input id="query" type="text" autocomplete="off">
+            <select id="match-kind" aria-label="匹配方式">
+                <option value="0">包含</option>
+                <option value="1">开头是</option>
+                <option value="2">完全相同</option>
+                <option value="3">正则表达式</option>
+            </select>
+        </section>
+
+        <fieldset id="style-options">
+            <legend>同样式匹配项目</legend>
+            <div class="check-grid">
+                <label><input id="match-font" type="checkbox"> 字体</label>
+                <label><input id="match-size" type="checkbox"> 字号</label>
+                <label><input id="match-color" type="checkbox"> 颜色</label>
+                <label><input id="match-face" type="checkbox"> 粗体/斜体</label>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>范围</legend>
+            <label class="option"><input id="include-hidden" type="checkbox"> <span>包含隐藏图层</span></label>
+        </fieldset>
+
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+        <button id="select-layers" type="button">选择匹配图层</button>
+    </main>
+    <script src="js/main.js"></script>
+</body>
+</html>

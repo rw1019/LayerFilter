@@ -1,0 +1,165 @@
+:root {
+    color-scheme: dark;
+    font-family: "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+    font-size: 13px;
+    color: #f1f1f1;
+    background: #323232;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    min-width: 280px;
+    min-height: 430px;
+    margin: 0;
+    background: #323232;
+}
+
+body {
+    overflow-y: auto;
+}
+
+.panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 30px;
+    border-bottom: 1px solid #555;
+}
+
+.panel-icon {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    object-fit: contain;
+}
+
+h1 {
+    margin: 0 0 8px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 9px 10px 10px;
+    border: 1px solid #575757;
+    border-radius: 4px;
+}
+
+legend {
+    padding: 0 5px;
+    color: #d7d7d7;
+}
+
+.option {
+    display: flex;
+    align-items: center;
+    min-height: 25px;
+    cursor: pointer;
+}
+
+input[type="radio"],
+input[type="checkbox"] {
+    margin: 0 7px 0 0;
+    accent-color: #39a6e8;
+}
+
+.query-row {
+    display: grid;
+    grid-template-columns: auto minmax(80px, 1fr) 100px;
+    gap: 7px;
+    align-items: center;
+}
+
+input[type="text"],
+select {
+    width: 100%;
+    height: 28px;
+    padding: 3px 7px;
+    border: 1px solid #696969;
+    border-radius: 3px;
+    outline: none;
+    color: #f1f1f1;
+    background: #454545;
+}
+
+input[type="text"]:focus,
+select:focus {
+    border-color: #39a6e8;
+}
+
+input:disabled,
+select:disabled,
+fieldset:disabled {
+    opacity: 0.48;
+}
+
+.check-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+}
+
+.check-grid label {
+    white-space: nowrap;
+}
+
+.status {
+    min-height: 18px;
+    color: #bdbdbd;
+}
+
+.status.success {
+    color: #78d891;
+}
+
+.status.error {
+    color: #ff8c82;
+}
+
+button {
+    width: 100%;
+    height: 34px;
+    border: 1px solid #67b9e9;
+    border-radius: 4px;
+    color: #fff;
+    background: #147ebd;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #188fd3;
+}
+
+button:active {
+    background: #0e6da7;
+}
+
+button:disabled {
+    cursor: default;
+    opacity: 0.55;
+}
+
+@media (max-width: 310px) {
+    .query-row {
+        grid-template-columns: auto 1fr;
+    }
+
+    .query-row select {
+        grid-column: 2;
+    }
+}
