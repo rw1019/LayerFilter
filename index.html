@@ -9,22 +9,41 @@
 <body>
     <main class="panel">
         <header class="panel-header">
-            <img class="panel-icon" src="icons/IconDark@2X.png" alt="">
-            <h1>图层筛选</h1>
+            <img class="panel-icon" src="icons/IconDark@2X.png" alt="LayerFilter">
+            <h1>图层筛选增强版</h1>
         </header>
 
-        <fieldset>
+        <!-- 模式选择 -->
+        <fieldset class="section-fieldset">
             <legend>选择依据</legend>
-            <label class="option"><input type="radio" name="mode" value="price"> <span>价格文字（含 ￥ 或 ¥）</span></label>
-            <label class="option"><input type="radio" name="mode" value="style"> <span>与当前文字图层样式相同</span></label>
-            <label class="option"><input type="radio" name="mode" value="content"> <span>文字内容匹配</span></label>
-            <label class="option"><input type="radio" name="mode" value="name"> <span>任意图层名称包含</span></label>
-            <label class="option"><input type="radio" name="mode" value="group"> <span>图层组名称包含</span></label>
+            <div class="mode-options">
+                <label class="option"><input type="radio" name="mode" value="price"> <span>价格文字（￥/¥/$/券后/到手价等）</span></label>
+                <label class="option"><input type="radio" name="mode" value="style"> <span>与当前文字图层样式相同</span></label>
+                <label class="option"><input type="radio" name="mode" value="content"> <span>文字内容匹配</span></label>
+                <label class="option"><input type="radio" name="mode" value="name"> <span>图层名称匹配</span></label>
+                <label class="option"><input type="radio" name="mode" value="group"> <span>图层组名称匹配</span></label>
+                <label class="option"><input type="radio" name="mode" value="type"> <span>按图层类型筛选</span></label>
+            </div>
         </fieldset>
 
-        <section class="query-row">
+        <!-- 图层类型选择行（当选择依据为“图层类型”时激活） -->
+        <section id="layer-type-row" class="form-row hidden">
+            <label for="layer-type">目标类型</label>
+            <select id="layer-type">
+                <option value="text">纯文字图层 (Text)</option>
+                <option value="smartObject">智能对象 (SmartObject)</option>
+                <option value="shape">形状/矢量图层 (Shape)</option>
+                <option value="pixel">普通像素图层 (Pixel)</option>
+                <option value="adjustment">调整图层 (Adjustment)</option>
+                <option value="group">图层组 (Group)</option>
+            </select>
+        </section>
+
+        <!-- 搜索输入行 -->
+        <section id="query-row" class="query-row">
             <label for="query">关键词</label>
-            <input id="query" type="text" autocomplete="off">
+            <input id="query" type="text" placeholder="输入搜索词或价格符号..." autocomplete="off">
+            <button id="btn-pick-name" class="btn-pick" type="button" title="点击获取当前选中的图层名称并填入关键词">填入</button>
             <select id="match-kind" aria-label="匹配方式">
                 <option value="0">包含</option>
                 <option value="1">开头是</option>
@@ -33,7 +52,8 @@
             </select>
         </section>
 
-        <fieldset id="style-options">
+        <!-- 样式匹配选项 -->
+        <fieldset id="style-options" class="section-fieldset">
             <legend>同样式匹配项目</legend>
             <div class="check-grid">
                 <label><input id="match-font" type="checkbox"> 字体</label>
@@ -43,14 +63,30 @@
             </div>
         </fieldset>
 
-        <fieldset>
-            <legend>范围</legend>
-            <label class="option"><input id="include-hidden" type="checkbox"> <span>包含隐藏图层</span></label>
+        <!-- 范围与匹配偏好 -->
+        <fieldset class="section-fieldset">
+            <legend>选项偏好</legend>
+            <div class="check-grid">
+                <label><input id="include-hidden" type="checkbox"> 包含隐藏图层</label>
+                <label><input id="ignore-case" type="checkbox"> 忽略大小写</label>
+            </div>
         </fieldset>
 
-        <div id="status" class="status" role="status" aria-live="polite"></div>
-        <button id="select-layers" type="button">选择匹配图层</button>
+        <!-- 状态反馈栏 -->
+        <div id="status" class="status" role="status" aria-live="polite">准备就绪</div>
+
+        <!-- 主操作：选择匹配图层 -->
+        <button id="select-layers" class="btn-primary" type="button">选择匹配图层 (Enter)</button>
+
+        <!-- 快捷批处理工具栏 -->
+        <div class="action-toolbar">
+            <button id="btn-show" class="btn-secondary" type="button" title="直接显示所有匹配图层">显示</button>
+            <button id="btn-hide" class="btn-secondary" type="button" title="直接隐藏所有匹配图层">隐藏</button>
+            <button id="btn-lock" class="btn-secondary" type="button" title="锁定所有匹配图层">锁定</button>
+            <button id="btn-group" class="btn-secondary" type="button" title="将匹配图层打包成新组">编组</button>
+        </div>
     </main>
+
     <script src="js/main.js"></script>
 </body>
 </html>

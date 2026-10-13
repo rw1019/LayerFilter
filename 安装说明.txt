@@ -1,13 +1,29 @@
-图层筛选 CEP 插件
+图层筛选 (LayerFilter) CEP 扩展增强版
 
-安装：
-1. 将整个 LayerFilter 文件夹复制到：
-   C:\Program Files\Adobe\Adobe Photoshop 2025\Required\CEP\extensions
-2. 重启 Photoshop 2025。
-3. 打开“窗口 > 扩展功能（旧版）> 图层筛选”。
+============================================================
+【方法一：一键自动安装（最简单推荐）】
+============================================================
+- Windows 用户：
+  双击运行本目录下的 "install-win.bat"。
+  （脚本会自动配置注册表 PlayerDebugMode 并复制到 CEP 目录，无需手动找路径）
 
-插件面板可以停靠在 Photoshop 侧边栏，并会自动记住上次设置。
+- macOS 用户：
+  在终端中运行：bash install-mac.sh
 
-如果菜单中没有“扩展功能（旧版）”，请确认复制的是整个 LayerFilter 文件夹，
-且最终路径为：
-C:\Program Files\Adobe\Adobe Photoshop 2025\Required\CEP\extensions\LayerFilter\CSXS\manifest.xml
+安装完毕后重启 Photoshop 即可使用！
+
+============================================================
+【方法二：手动安装】
+============================================================
+1. 将整个 LayerFilter 文件夹复制到用户 CEP 目录：
+   C:\Users\<你的用户名>\AppData\Roaming\Adobe\CEP\extensions\LayerFilter
+   （如无 CEP/extensions 文件夹请手动新建）
+
+2. 开启调试模式：
+   Win + R 输入 regedit 打开注册表：
+   定位到 HKEY_CURRENT_USER\Software\Adobe\CSXS.11
+   （以及 CSXS.9 到 CSXS.16）
+   新建字符串值 PlayerDebugMode，数值设为 1。
+
+3. 重启 Photoshop，在顶部菜单打开：
+   “窗口 > 扩展功能（旧版）> 图层筛选”。
