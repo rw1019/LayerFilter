@@ -20,8 +20,8 @@
     var matchKind = document.getElementById("match-kind");
     var includeHidden = document.getElementById("include-hidden");
     var ignoreCase = document.getElementById("ignore-case");
-    var layerTypeSelect = document.getElementById("layer-type");
-    var layerTypeRow = document.getElementById("layer-type-row");
+    var layerTypeGrid = document.getElementById("layer-type-grid");
+    var typeChips = document.querySelectorAll(".type-chip");
     var queryRow = document.getElementById("query-row");
     var matchFont = document.getElementById("match-font");
     var matchSize = document.getElementById("match-size");
@@ -33,17 +33,22 @@
     var btnHide = document.getElementById("btn-hide");
     var btnLock = document.getElementById("btn-lock");
     var btnGroup = document.getElementById("btn-group");
+    var btnCopyStyle = document.getElementById("btn-copy-style");
+    var btnPasteStyle = document.getElementById("btn-paste-style");
     var btnPickName = document.getElementById("btn-pick-name");
     var status = document.getElementById("status");
     var modeInputs = document.querySelectorAll('input[name="mode"]');
 
-    var allActionButtons = [selectButton, btnShow, btnHide, btnLock, btnGroup];
+    var allActionButtons = [
+        selectButton, btnShow, btnHide, btnLock, btnGroup,
+        btnCopyStyle, btnPasteStyle, btnPickName
+    ];
 
     initThemeSync();
     restoreSettings();
     updateControls();
 
-    // Mode change listener
+    // Mode radio change listeners
     for (var i = 0; i < modeInputs.length; i++) {
         modeInputs[i].addEventListener("change", function () {
             updateControls();
@@ -51,10 +56,30 @@
         });
     }
 
+    // Direct Type Chip click handlers
+    for (var c = 0; c < typeChips.length; c++) {
+        typeChips[c].addEventListener("click", function () {
+            var selectedType = this.getAttribute("data-type");
+            setSelectedLayerType(selectedType);
+
+            // Automatically switch mode to "按图层类型筛选"
+            var typeRadio = document.querySelector('input[name="mode"][value="type"]');
+            if (typeRadio) {
+                typeRadio.checked = true;
+            }
+
+            updateControls();
+            saveSettings();
+
+            var label = this.querySelector(".chip-label") ? this.querySelector(".chip-label").textContent : selectedType;
+            showStatus("已选定图层类型: " + label, false, true);
+        });
+    }
+
     // Controls change listeners
     var persistentControls = [
         queryInput, matchKind, includeHidden, ignoreCase,
-        layerTypeSelect, matchFont, matchSize, matchColor, matchFace
+        matchFont, matchSize, matchColor, matchFace
     ];
     for (var j = 0; j < persistentControls.length; j++) {
         persistentControls[j].addEventListener("change", saveSettings);
@@ -75,6 +100,52 @@
     btnHide.addEventListener("click", function () { executeAction("hide"); });
     btnLock.addEventListener("click", function () { executeAction("lock"); });
     btnGroup.addEventListener("click", function () { executeAction("group"); });
+
+    // Copy Layer Style
+    btnCopyStyle.addEventListener("click", function () {
+        if (typeof window.__adobe_cep__ === "undefined" || !window.__adobe_cep__.evalScript) {
+            showStatus("离线模式：已复制图层样式", false, true);
+            return;
+        }
+
+        showStatus("正在复制图层样式...", false);
+        window.__adobe_cep__.evalScript("LayerFilter.copyLayerStyle()", function (result) {
+            if (!result || result === "EvalScript error.") {
+                showStatus("Photoshop 未能执行复制图层样式。", true);
+                return;
+            }
+            if (result.indexOf("OK|") === 0) {
+                showStatus(result.substring(3), false, true);
+            } else if (result.indexOf("ERR|") === 0) {
+                showStatus(result.substring(4), true);
+            } else {
+                showStatus(result, true);
+            }
+        });
+    });
+
+    // Paste Layer Style
+    btnPasteStyle.addEventListener("click", function () {
+        if (typeof window.__adobe_cep__ === "undefined" || !window.__adobe_cep__.evalScript) {
+            showStatus("离线模式：已粘贴图层样式", false, true);
+            return;
+        }
+
+        showStatus("正在粘贴图层样式...", false);
+        window.__adobe_cep__.evalScript("LayerFilter.pasteLayerStyle()", function (result) {
+            if (!result || result === "EvalScript error.") {
+                showStatus("Photoshop 未能执行粘贴图层样式。", true);
+                return;
+            }
+            if (result.indexOf("OK|") === 0) {
+                showStatus(result.substring(3), false, true);
+            } else if (result.indexOf("ERR|") === 0) {
+                showStatus(result.substring(4), true);
+            } else {
+                showStatus(result, true);
+            }
+        });
+    });
 
     // Pick active layer name and fill into query
     btnPickName.addEventListener("click", function () {
@@ -130,14 +201,29 @@
         return checked ? checked.value : "price";
     }
 
+    function getSelectedLayerType() {
+        var active = document.querySelector(".type-chip.active");
+        return active ? active.getAttribute("data-type") : "text";
+    }
+
+    function setSelectedLayerType(type) {
+        for (var i = 0; i < typeChips.length; i++) {
+            if (typeChips[i].getAttribute("data-type") === type) {
+                typeChips[i].classList.add("active");
+            } else {
+                typeChips[i].classList.remove("active");
+            }
+        }
+    }
+
     function updateControls() {
         var mode = currentMode();
 
-        // Layer type row visibility
+        // Layer type chip grid visibility
         if (mode === "type") {
-            layerTypeRow.classList.remove("hidden");
+            layerTypeGrid.classList.remove("hidden");
         } else {
-            layerTypeRow.classList.add("hidden");
+            layerTypeGrid.classList.add("hidden");
         }
 
         // Query input availability
@@ -147,7 +233,7 @@
         if (mode === "price") {
             queryInput.placeholder = "可选：输入自定义符号或关键词";
         } else if (mode === "type") {
-            queryInput.placeholder = "按类型无需关键词";
+            queryInput.placeholder = "按类型筛选无需关键词";
         } else {
             queryInput.placeholder = "输入搜索关键词...";
         }
@@ -163,7 +249,7 @@
             matchKind: Number(matchKind.value),
             includeHidden: includeHidden.checked,
             ignoreCase: ignoreCase.checked,
-            layerType: layerTypeSelect.value,
+            layerType: getSelectedLayerType(),
             matchFont: matchFont.checked,
             matchSize: matchSize.checked,
             matchColor: matchColor.checked,
@@ -194,7 +280,7 @@
         matchKind.value = String(settings.matchKind);
         includeHidden.checked = settings.includeHidden;
         ignoreCase.checked = settings.ignoreCase !== undefined ? settings.ignoreCase : true;
-        layerTypeSelect.value = settings.layerType || "text";
+        setSelectedLayerType(settings.layerType || "text");
         matchFont.checked = settings.matchFont;
         matchSize.checked = settings.matchSize;
         matchColor.checked = settings.matchColor;
@@ -203,7 +289,9 @@
 
     function setButtonsDisabled(disabled) {
         for (var k = 0; k < allActionButtons.length; k++) {
-            allActionButtons[k].disabled = disabled;
+            if (allActionButtons[k]) {
+                allActionButtons[k].disabled = disabled;
+            }
         }
     }
 
