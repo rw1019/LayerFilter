@@ -591,34 +591,34 @@ LayerFilter.getActiveLayerName = function () {
     return "ERR|未获取到当前选中的图层。";
 };
 
-// Copy layer style (effects)
+// Copy layer style (effects) - supports all layers and layer groups
 LayerFilter.copyLayerStyle = function () {
     if (app.documents.length === 0) {
         return "ERR|请先打开一个 Photoshop 文档。";
     }
     try {
-        var desc = new ActionDescriptor();
-        var ref = new ActionReference();
-        ref.putClass(charIDToTypeID("Lyr "));
-        desc.putReference(charIDToTypeID("null"), ref);
-        executeAction(charIDToTypeID("cpFX"), desc, DialogModes.NO);
+        try {
+            executeAction(charIDToTypeID("CpFX"), undefined, DialogModes.NO);
+        } catch (e1) {
+            executeAction(stringIDToTypeID("copyEffects"), undefined, DialogModes.NO);
+        }
         return "OK|已成功复制当前图层样式";
     } catch (e) {
         return "ERR|当前图层无可用图层样式或未选中图层。";
     }
 };
 
-// Paste layer style (effects) to selected layers
+// Paste layer style (effects) to selected layers or groups
 LayerFilter.pasteLayerStyle = function () {
     if (app.documents.length === 0) {
         return "ERR|请先打开一个 Photoshop 文档。";
     }
     try {
-        var desc = new ActionDescriptor();
-        var ref = new ActionReference();
-        ref.putClass(charIDToTypeID("Lyr "));
-        desc.putReference(charIDToTypeID("null"), ref);
-        executeAction(charIDToTypeID("paFX"), desc, DialogModes.NO);
+        try {
+            executeAction(charIDToTypeID("PaFX"), undefined, DialogModes.NO);
+        } catch (e1) {
+            executeAction(stringIDToTypeID("pasteEffects"), undefined, DialogModes.NO);
+        }
         return "OK|已将样式粘贴至当前选中的图层";
     } catch (e) {
         return "ERR|粘贴样式失败（剪贴板为空或图层被锁定）。";
