@@ -25,30 +25,49 @@
                 <label class="option"><input type="radio" name="mode" value="type"> <span>按图层类型筛选</span></label>
             </div>
 
-            <!-- 可视化图层类型直接选（摒弃下拉菜单） -->
+            <!-- 可视化图层类型直接选（摒弃下拉菜单，采用 Photoshop 原生风格矢量图标） -->
             <div id="layer-type-grid" class="type-chip-grid hidden">
                 <button type="button" class="type-chip active" data-type="text" title="筛选纯文字图层">
-                    <span class="chip-icon">T</span>
+                    <svg class="chip-svg" viewBox="0 0 16 16" width="18" height="18" fill="currentColor">
+                        <path d="M2 3h12v2.5h-1.2c-.2-1-.5-1.3-1.8-1.3h-1.5v8.5c0 .7.3.8 1.2.8h.8V14.5H4.5V13.5h.8c.9 0 1.2-.1 1.2-.8V4.2H5c-1.3 0-1.6.3-1.8 1.3H2V3z"/>
+                    </svg>
                     <span class="chip-label">文字</span>
                 </button>
                 <button type="button" class="type-chip" data-type="smartObject" title="筛选智能对象图层">
-                    <span class="chip-icon">📦</span>
+                    <svg class="chip-svg" viewBox="0 0 16 16" width="18" height="18" fill="currentColor">
+                        <path d="M5 1a1 1 0 0 0-1 1v6h2V3h4v3.5a.5.5 0 0 0 .5.5H14v6.5a.5.5 0 0 1-.5.5H8v2h5.5a2.5 2.5 0 0 0 2.5-2.5V7a1 1 0 0 0-.3-.7l-4.5-4.5A1 1 0 0 0 10.5 1H5zm6 1.4L13.6 6H11V2.4z"/>
+                        <path d="M1 8a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1H1z"/>
+                    </svg>
                     <span class="chip-label">智能对象</span>
                 </button>
                 <button type="button" class="type-chip" data-type="shape" title="筛选矢量/形状图层">
-                    <span class="chip-icon">⬡</span>
+                    <svg class="chip-svg" viewBox="0 0 16 16" width="18" height="18" fill="currentColor">
+                        <rect x="1" y="1" width="3.5" height="3.5" rx="0.5"/>
+                        <rect x="11.5" y="1" width="3.5" height="3.5" rx="0.5"/>
+                        <rect x="1" y="11.5" width="3.5" height="3.5" rx="0.5"/>
+                        <rect x="11.5" y="11.5" width="3.5" height="3.5" rx="0.5"/>
+                        <path d="M4.5 2.2h7v1.5h-7V2.2zm0 10.1h7v1.5h-7v-1.5zM2.2 4.5h1.5v7H2.2v-7zm10.1 0h1.5v7h-1.5v-7z"/>
+                    </svg>
                     <span class="chip-label">形状</span>
                 </button>
                 <button type="button" class="type-chip" data-type="pixel" title="筛选普通像素图层">
-                    <span class="chip-icon">🖼️</span>
+                    <svg class="chip-svg" viewBox="0 0 16 16" width="18" height="18" fill="currentColor">
+                        <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h11A1.5 1.5 0 0 1 15 2.5v11a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 13.5v-11zm1.5 0v11h11v-11h-11z"/>
+                        <path d="M3.5 11.5l3-4 1.8 2.4 2.2-3 2.5 4.6h-9.5z"/>
+                    </svg>
                     <span class="chip-label">像素</span>
                 </button>
                 <button type="button" class="type-chip" data-type="adjustment" title="筛选调整图层">
-                    <span class="chip-icon">◑</span>
+                    <svg class="chip-svg" viewBox="0 0 16 16" width="18" height="18" fill="currentColor">
+                        <path d="M8 1a7 7 0 1 0 7 7A7 7 0 0 0 8 1zm0 1.5a5.5 5.5 0 0 1 3.89 9.39L4.11 4.11A5.47 5.47 0 0 1 8 2.5z"/>
+                        <path d="M4.11 4.11L11.89 11.89A5.5 5.5 0 0 1 8 13.5c-3.04 0-5.5-2.46-5.5-5.5 0-1.46.57-2.8 1.61-3.89z"/>
+                    </svg>
                     <span class="chip-label">调整层</span>
                 </button>
                 <button type="button" class="type-chip" data-type="group" title="筛选图层组">
-                    <span class="chip-icon">📁</span>
+                    <svg class="chip-svg" viewBox="0 0 16 16" width="18" height="18" fill="currentColor">
+                        <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h3.3a1.5 1.5 0 0 1 1.1.5L8.2 4H13.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5v-9zm1.5 0a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5V5.5a.5.5 0 0 0-.5-.5H7.8a1 1 0 0 1-.7-.3L5.7 3.5H2.5z"/>
+                    </svg>
                     <span class="chip-label">图层组</span>
                 </button>
             </div>
