@@ -56,13 +56,13 @@
         });
     }
 
-    // Direct Type Chip click handlers
+    // Direct Type Chip click handlers (点击即直接自动筛选，无需再点确认，类似 PS 原生逻辑)
     for (var c = 0; c < typeChips.length; c++) {
         typeChips[c].addEventListener("click", function () {
             var selectedType = this.getAttribute("data-type");
             setSelectedLayerType(selectedType);
 
-            // Automatically switch mode to "按图层类型筛选"
+            // 自动选中“按图层类型筛选”单选框
             var typeRadio = document.querySelector('input[name="mode"][value="type"]');
             if (typeRadio) {
                 typeRadio.checked = true;
@@ -71,8 +71,8 @@
             updateControls();
             saveSettings();
 
-            var label = this.querySelector(".chip-label") ? this.querySelector(".chip-label").textContent : selectedType;
-            showStatus("已选定图层类型: " + label, false, true);
+            // 仅限“按图层类型筛选”：点击类型按钮后，免按确认键，立即自动触发筛选
+            executeAction("select");
         });
     }
 
