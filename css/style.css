@@ -186,6 +186,10 @@ fieldset:disabled {
     cursor: pointer;
 }
 
+.check-grid label.full-width {
+    grid-column: 1 / -1;
+}
+
 .status {
     min-height: 18px;
     padding: 2px 4px;

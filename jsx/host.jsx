@@ -2,6 +2,56 @@
 
 var LayerFilter = LayerFilter || {};
 
+// Module-level TypeID cache to eliminate thousands of repeated stringID/charID conversions
+LayerFilter.IDs = {
+    Lyr: charIDToTypeID("Lyr "),
+    Dcmn: charIDToTypeID("Dcmn"),
+    Ordn: charIDToTypeID("Ordn"),
+    Trgt: charIDToTypeID("Trgt"),
+    Prpr: charIDToTypeID("Prpr"),
+    nullID: charIDToTypeID("null"),
+    slct: charIDToTypeID("slct"),
+    MkVs: charIDToTypeID("MkVs"),
+    Shw: charIDToTypeID("Shw "),
+    Hd: charIDToTypeID("Hd  "),
+    Mk: charIDToTypeID("Mk  "),
+    from: charIDToTypeID("from"),
+    Usng: charIDToTypeID("Usng"),
+    T: charIDToTypeID("T   "),
+    Txt: charIDToTypeID("Txt "),
+    Nm: charIDToTypeID("Nm  "),
+    Vsbl: charIDToTypeID("Vsbl"),
+    Clr: charIDToTypeID("Clr "),
+    Rd: charIDToTypeID("Rd  "),
+    Grn: charIDToTypeID("Grn "),
+    Bl: charIDToTypeID("Bl  "),
+    LyrI: charIDToTypeID("LyrI"),
+    CpFX: charIDToTypeID("CpFX"),
+    PaFX: charIDToTypeID("PaFX"),
+    numberOfLayers: stringIDToTypeID("numberOfLayers"),
+    hasBackgroundLayer: stringIDToTypeID("hasBackgroundLayer"),
+    layerID: stringIDToTypeID("layerID"),
+    layerSection: stringIDToTypeID("layerSection"),
+    layerSectionStart: stringIDToTypeID("layerSectionStart"),
+    layerSectionEnd: stringIDToTypeID("layerSectionEnd"),
+    layerKind: stringIDToTypeID("layerKind"),
+    textStyleRange: stringIDToTypeID("textStyleRange"),
+    textStyle: stringIDToTypeID("textStyle"),
+    fontPostScriptName: stringIDToTypeID("fontPostScriptName"),
+    size: stringIDToTypeID("size"),
+    fauxBold: stringIDToTypeID("fauxBold"),
+    fauxItalic: stringIDToTypeID("fauxItalic"),
+    selectionModifier: stringIDToTypeID("selectionModifier"),
+    selectionModifierType: stringIDToTypeID("selectionModifierType"),
+    addToSelection: stringIDToTypeID("addToSelection"),
+    protectAll: stringIDToTypeID("protectAll"),
+    layerLocking: stringIDToTypeID("layerLocking"),
+    applyLocking: stringIDToTypeID("applyLocking"),
+    targetLayersIDs: stringIDToTypeID("targetLayersIDs"),
+    copyEffects: stringIDToTypeID("copyEffects"),
+    pasteEffects: stringIDToTypeID("pasteEffects")
+};
+
 LayerFilter.runAction = function (
     action,         // 'select', 'show', 'hide', 'lock', 'unlock', 'group'
     mode,           // 'price', 'style', 'content', 'name', 'group', 'type'
@@ -9,7 +59,6 @@ LayerFilter.runAction = function (
     matchKind,      // 0: contains, 1: startsWith, 2: exact, 3: regex
     includeHidden,  // boolean
     ignoreCase,     // boolean
-    scopeGroupOnly, // boolean
     layerType,      // 'text', 'smartObject', 'shape', 'pixel', 'adjustment', 'group'
     matchFont,      // boolean
     matchSize,      // boolean
@@ -22,7 +71,6 @@ LayerFilter.runAction = function (
 
     try {
         var startTime = new Date().getTime();
-        var doc = app.activeDocument;
         var referenceStyle = null;
 
         if (mode === "style") {
@@ -39,7 +87,6 @@ LayerFilter.runAction = function (
             matchKind: Number(matchKind || 0),
             includeHidden: Boolean(includeHidden),
             ignoreCase: Boolean(ignoreCase),
-            scopeGroupOnly: Boolean(scopeGroupOnly),
             layerType: layerType || "text",
             matchFont: Boolean(matchFont),
             matchSize: Boolean(matchSize),
@@ -47,8 +94,8 @@ LayerFilter.runAction = function (
             matchFace: Boolean(matchFace)
         };
 
-        // Scan layers via high-performance Action Manager
-        var layers = LayerFilter.scanLayers(settings.includeHidden, settings.scopeGroupOnly);
+        // Scan layers via high-performance Action Manager (with on-demand descriptor reading)
+        var layers = LayerFilter.scanLayers(settings.includeHidden, settings.mode);
         if (!layers || layers.length === 0) {
             return "ERR|未找到可供筛选的图层。";
         }
@@ -102,7 +149,10 @@ LayerFilter.executeBatchAction = function (action, ids) {
             LayerFilter.setLayersLock(ids, false);
         } else if (action === "group") {
             LayerFilter.selectLayerIds(ids);
-            LayerFilter.groupSelectedLayers("筛选图层组");
+            var grpResult = LayerFilter.groupSelectedLayers("筛选图层组");
+            if (grpResult && grpResult.indexOf("ERR|") === 0) {
+                return grpResult;
+            }
         } else {
             // Default: select
             LayerFilter.selectLayerIds(ids);
@@ -113,41 +163,46 @@ LayerFilter.executeBatchAction = function (action, ids) {
     }
 };
 
-// Scan layers using Action Manager (10x-50x faster than DOM traversal)
-LayerFilter.scanLayers = function (includeHidden, scopeGroupOnly) {
+// Scan layers using Action Manager (optimized with on-demand text/style parsing)
+LayerFilter.scanLayers = function (includeHidden, mode) {
+    var IDs = LayerFilter.IDs;
     try {
         var docRef = new ActionReference();
-        docRef.putProperty(charIDToTypeID("Prpr"), stringIDToTypeID("numberOfLayers"));
-        docRef.putEnumerated(charIDToTypeID("Dcmn"), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
+        docRef.putProperty(IDs.Prpr, IDs.numberOfLayers);
+        docRef.putEnumerated(IDs.Dcmn, IDs.Ordn, IDs.Trgt);
         var docDesc = executeActionGet(docRef);
-        var total = docDesc.getInteger(stringIDToTypeID("numberOfLayers"));
+        var total = docDesc.getInteger(IDs.numberOfLayers);
 
         var bgRef = new ActionReference();
-        bgRef.putProperty(charIDToTypeID("Prpr"), stringIDToTypeID("hasBackgroundLayer"));
-        bgRef.putEnumerated(charIDToTypeID("Dcmn"), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
-        var hasBg = executeActionGet(bgRef).getBoolean(stringIDToTypeID("hasBackgroundLayer"));
+        bgRef.putProperty(IDs.Prpr, IDs.hasBackgroundLayer);
+        bgRef.putEnumerated(IDs.Dcmn, IDs.Ordn, IDs.Trgt);
+        var hasBg = executeActionGet(bgRef).getBoolean(IDs.hasBackgroundLayer);
 
         var startIndex = hasBg ? 0 : 1;
         var layers = [];
         var groupVisStack = [];
 
+        // Flags for on-demand descriptor retrieval
+        var needTextContent = (mode === "price" || mode === "content");
+        var needTextStyle = (mode === "style");
+
         // Scan from top (total) down to bottom (startIndex)
         for (var i = total; i >= startIndex; i--) {
             try {
                 var ref = new ActionReference();
-                ref.putIndex(charIDToTypeID("Lyr "), i);
+                ref.putIndex(IDs.Lyr, i);
                 var desc = executeActionGet(ref);
 
-                var id = desc.getInteger(stringIDToTypeID("layerID"));
-                var name = desc.getString(charIDToTypeID("Nm  "));
-                var visible = desc.getBoolean(charIDToTypeID("Vsbl"));
+                var id = desc.getInteger(IDs.layerID);
+                var name = desc.getString(IDs.Nm);
+                var visible = desc.getBoolean(IDs.Vsbl);
 
                 var section = "content";
-                if (desc.hasKey(stringIDToTypeID("layerSection"))) {
-                    var secType = desc.getEnumerationValue(stringIDToTypeID("layerSection"));
-                    if (secType === stringIDToTypeID("layerSectionStart")) {
+                if (desc.hasKey(IDs.layerSection)) {
+                    var secType = desc.getEnumerationValue(IDs.layerSection);
+                    if (secType === IDs.layerSectionStart) {
                         section = "start";
-                    } else if (secType === stringIDToTypeID("layerSectionEnd")) {
+                    } else if (secType === IDs.layerSectionEnd) {
                         section = "end";
                     }
                 }
@@ -192,8 +247,8 @@ LayerFilter.scanLayers = function (includeHidden, scopeGroupOnly) {
                 var textContent = "";
                 var textStyle = null;
 
-                if (desc.hasKey(stringIDToTypeID("layerKind"))) {
-                    var k = desc.getInteger(stringIDToTypeID("layerKind"));
+                if (desc.hasKey(IDs.layerKind)) {
+                    var k = desc.getInteger(IDs.layerKind);
                     if (k === 1) kind = "pixel";
                     else if (k === 2) kind = "adjustment";
                     else if (k === 3) kind = "text";
@@ -201,13 +256,22 @@ LayerFilter.scanLayers = function (includeHidden, scopeGroupOnly) {
                     else if (k === 5) kind = "smartObject";
                 }
 
-                if (desc.hasKey(charIDToTypeID("Txt "))) {
+                var hasTxt = desc.hasKey(IDs.Txt);
+                if (hasTxt) {
                     kind = "text";
-                    var textDesc = desc.getObjectValue(charIDToTypeID("Txt "));
-                    if (textDesc.hasKey(charIDToTypeID("Txt "))) {
-                        textContent = textDesc.getString(charIDToTypeID("Txt "));
+                }
+
+                // On-demand reading: Only read text content or styles when required by current mode
+                if (hasTxt) {
+                    if (needTextContent) {
+                        var textDesc = desc.getObjectValue(IDs.Txt);
+                        if (textDesc.hasKey(IDs.Txt)) {
+                            textContent = textDesc.getString(IDs.Txt);
+                        }
+                    } else if (needTextStyle) {
+                        var textDesc2 = desc.getObjectValue(IDs.Txt);
+                        textStyle = LayerFilter.extractTextStyleFromDesc(textDesc2);
                     }
-                    textStyle = LayerFilter.extractTextStyleFromDesc(textDesc);
                 }
 
                 layers.push({
@@ -394,32 +458,34 @@ LayerFilter.colorMatches = function (c1, c2, tolerance) {
            Math.abs(c1.b - c2.b) <= tol;
 };
 
+// Extracts text style properties (uses first textStyleRange as benchmark for mixed-style text layers)
 LayerFilter.extractTextStyleFromDesc = function (textDesc) {
     try {
-        if (!textDesc.hasKey(stringIDToTypeID("textStyleRange"))) return null;
-        var ranges = textDesc.getList(stringIDToTypeID("textStyleRange"));
+        var IDs = LayerFilter.IDs;
+        if (!textDesc.hasKey(IDs.textStyleRange)) return null;
+        var ranges = textDesc.getList(IDs.textStyleRange);
         if (ranges.count === 0) return null;
         var firstRange = ranges.getObjectValue(0);
-        if (!firstRange.hasKey(stringIDToTypeID("textStyle"))) return null;
-        var style = firstRange.getObjectValue(stringIDToTypeID("textStyle"));
+        if (!firstRange.hasKey(IDs.textStyle)) return null;
+        var style = firstRange.getObjectValue(IDs.textStyle);
 
-        var font = style.hasKey(stringIDToTypeID("fontPostScriptName")) ? style.getString(stringIDToTypeID("fontPostScriptName")) : null;
-        var size = style.hasKey(stringIDToTypeID("size")) ? style.getUnitDoubleValue(stringIDToTypeID("size")) : null;
+        var font = style.hasKey(IDs.fontPostScriptName) ? style.getString(IDs.fontPostScriptName) : null;
+        var size = style.hasKey(IDs.size) ? style.getUnitDoubleValue(IDs.size) : null;
 
         var color = null;
-        if (style.hasKey(charIDToTypeID("Clr "))) {
-            var colorDesc = style.getObjectValue(charIDToTypeID("Clr "));
-            if (colorDesc.hasKey(charIDToTypeID("Rd  "))) {
+        if (style.hasKey(IDs.Clr)) {
+            var colorDesc = style.getObjectValue(IDs.Clr);
+            if (colorDesc.hasKey(IDs.Rd)) {
                 color = {
-                    r: Math.round(colorDesc.getDouble(charIDToTypeID("Rd  "))),
-                    g: Math.round(colorDesc.getDouble(charIDToTypeID("Grn "))),
-                    b: Math.round(colorDesc.getDouble(charIDToTypeID("Bl  ")))
+                    r: Math.round(colorDesc.getDouble(IDs.Rd)),
+                    g: Math.round(colorDesc.getDouble(IDs.Grn)),
+                    b: Math.round(colorDesc.getDouble(IDs.Bl))
                 };
             }
         }
 
-        var fauxBold = style.hasKey(stringIDToTypeID("fauxBold")) ? style.getBoolean(stringIDToTypeID("fauxBold")) : false;
-        var fauxItalic = style.hasKey(stringIDToTypeID("fauxItalic")) ? style.getBoolean(stringIDToTypeID("fauxItalic")) : false;
+        var fauxBold = style.hasKey(IDs.fauxBold) ? style.getBoolean(IDs.fauxBold) : false;
+        var fauxItalic = style.hasKey(IDs.fauxItalic) ? style.getBoolean(IDs.fauxItalic) : false;
 
         return {
             font: font,
@@ -435,12 +501,13 @@ LayerFilter.extractTextStyleFromDesc = function (textDesc) {
 
 LayerFilter.readReferenceStyle = function () {
     try {
+        var IDs = LayerFilter.IDs;
         var ref = new ActionReference();
-        ref.putProperty(charIDToTypeID("Prpr"), charIDToTypeID("Txt "));
-        ref.putEnumerated(charIDToTypeID("Lyr "), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
+        ref.putProperty(IDs.Prpr, IDs.Txt);
+        ref.putEnumerated(IDs.Lyr, IDs.Ordn, IDs.Trgt);
         var layerDesc = executeActionGet(ref);
-        if (layerDesc.hasKey(charIDToTypeID("Txt "))) {
-            var style = LayerFilter.extractTextStyleFromDesc(layerDesc.getObjectValue(charIDToTypeID("Txt ")));
+        if (layerDesc.hasKey(IDs.Txt)) {
+            var style = LayerFilter.extractTextStyleFromDesc(layerDesc.getObjectValue(IDs.Txt));
             if (style) return style;
         }
     } catch (e) {}
@@ -485,77 +552,84 @@ LayerFilter.selectLayerIds = function (ids) {
 };
 
 LayerFilter.selectLayerById = function (layerId, addToSelection) {
+    var IDs = LayerFilter.IDs;
     var descriptor = new ActionDescriptor();
     var reference = new ActionReference();
-    reference.putIdentifier(charIDToTypeID("Lyr "), layerId);
-    descriptor.putReference(charIDToTypeID("null"), reference);
+    reference.putIdentifier(IDs.Lyr, layerId);
+    descriptor.putReference(IDs.nullID, reference);
     if (addToSelection) {
         descriptor.putEnumerated(
-            stringIDToTypeID("selectionModifier"),
-            stringIDToTypeID("selectionModifierType"),
-            stringIDToTypeID("addToSelection")
+            IDs.selectionModifier,
+            IDs.selectionModifierType,
+            IDs.addToSelection
         );
     }
-    descriptor.putBoolean(charIDToTypeID("MkVs"), false);
-    executeAction(charIDToTypeID("slct"), descriptor, DialogModes.NO);
+    descriptor.putBoolean(IDs.MkVs, false);
+    executeAction(IDs.slct, descriptor, DialogModes.NO);
 };
 
 // Batch set layer visibility (Show / Hide in single or batched Action Manager call)
 LayerFilter.setLayersVisibility = function (ids, makeVisible) {
     if (!ids || ids.length === 0) return;
+    var IDs = LayerFilter.IDs;
     try {
         var list = new ActionList();
         for (var i = 0; i < ids.length; i++) {
             var ref = new ActionReference();
-            ref.putIdentifier(charIDToTypeID("Lyr "), ids[i]);
+            ref.putIdentifier(IDs.Lyr, ids[i]);
             list.putReference(ref);
         }
         var desc = new ActionDescriptor();
-        desc.putList(charIDToTypeID("null"), list);
-        executeAction(charIDToTypeID(makeVisible ? "Shw " : "Hd  "), desc, DialogModes.NO);
+        desc.putList(IDs.nullID, list);
+        executeAction(makeVisible ? IDs.Shw : IDs.Hd, desc, DialogModes.NO);
     } catch (e) {
         LayerFilter.selectLayerIds(ids);
         var desc2 = new ActionDescriptor();
         var list2 = new ActionList();
         var ref2 = new ActionReference();
-        ref2.putEnumerated(charIDToTypeID("Lyr "), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
+        ref2.putEnumerated(IDs.Lyr, IDs.Ordn, IDs.Trgt);
         list2.putReference(ref2);
-        desc2.putList(charIDToTypeID("null"), list2);
-        executeAction(charIDToTypeID(makeVisible ? "Shw " : "Hd  "), desc2, DialogModes.NO);
+        desc2.putList(IDs.nullID, list2);
+        executeAction(makeVisible ? IDs.Shw : IDs.Hd, desc2, DialogModes.NO);
     }
 };
 
 // Batch lock / unlock layers
 LayerFilter.setLayersLock = function (ids, lock) {
     if (!ids || ids.length === 0) return;
+    var IDs = LayerFilter.IDs;
     LayerFilter.selectLayerIds(ids);
     var desc = new ActionDescriptor();
     var ref = new ActionReference();
-    ref.putEnumerated(charIDToTypeID("Lyr "), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
-    desc.putReference(charIDToTypeID("null"), ref);
+    ref.putEnumerated(IDs.Lyr, IDs.Ordn, IDs.Trgt);
+    desc.putReference(IDs.nullID, ref);
     var lockDesc = new ActionDescriptor();
-    lockDesc.putBoolean(stringIDToTypeID("protectAll"), lock);
-    desc.putObject(charIDToTypeID("T   "), stringIDToTypeID("layerLocking"), lockDesc);
-    executeAction(stringIDToTypeID("applyLocking"), desc, DialogModes.NO);
+    lockDesc.putBoolean(IDs.protectAll, lock);
+    desc.putObject(IDs.T, IDs.layerLocking, lockDesc);
+    executeAction(IDs.applyLocking, desc, DialogModes.NO);
 };
 
-// Batch group selected layers
+// Batch group selected layers (now returns error details on failure instead of silent swallowing)
 LayerFilter.groupSelectedLayers = function (groupName) {
     try {
+        var IDs = LayerFilter.IDs;
         var desc = new ActionDescriptor();
         var ref = new ActionReference();
-        ref.putClass(stringIDToTypeID("layerSection"));
-        desc.putReference(charIDToTypeID("null"), ref);
+        ref.putClass(IDs.layerSection);
+        desc.putReference(IDs.nullID, ref);
         var fromRef = new ActionReference();
-        fromRef.putEnumerated(charIDToTypeID("Lyr "), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
-        desc.putReference(charIDToTypeID("from"), fromRef);
+        fromRef.putEnumerated(IDs.Lyr, IDs.Ordn, IDs.Trgt);
+        desc.putReference(IDs.from, fromRef);
         if (groupName) {
             var nameDesc = new ActionDescriptor();
-            nameDesc.putString(charIDToTypeID("Nm  "), groupName);
-            desc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), nameDesc);
+            nameDesc.putString(IDs.Nm, groupName);
+            desc.putObject(IDs.Usng, IDs.layerSection, nameDesc);
         }
-        executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
-    } catch (e) {}
+        executeAction(IDs.Mk, desc, DialogModes.NO);
+        return "OK";
+    } catch (e) {
+        return "ERR|编组失败：" + (e.message || "目标图层无法编组");
+    }
 };
 
 LayerFilter.safeValue = function (getter) {
@@ -572,12 +646,13 @@ LayerFilter.getActiveLayerName = function () {
         return "ERR|请先打开一个 Photoshop 文档。";
     }
     try {
+        var IDs = LayerFilter.IDs;
         var ref = new ActionReference();
-        ref.putProperty(charIDToTypeID("Prpr"), charIDToTypeID("Nm  "));
-        ref.putEnumerated(charIDToTypeID("Lyr "), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
+        ref.putProperty(IDs.Prpr, IDs.Nm);
+        ref.putEnumerated(IDs.Lyr, IDs.Ordn, IDs.Trgt);
         var desc = executeActionGet(ref);
-        if (desc.hasKey(charIDToTypeID("Nm  "))) {
-            return "OK|" + desc.getString(charIDToTypeID("Nm  "));
+        if (desc.hasKey(IDs.Nm)) {
+            return "OK|" + desc.getString(IDs.Nm);
         }
     } catch (e) {}
 
@@ -596,11 +671,12 @@ LayerFilter.copyLayerStyle = function () {
     if (app.documents.length === 0) {
         return "ERR|请先打开一个 Photoshop 文档。";
     }
+    var IDs = LayerFilter.IDs;
     try {
         try {
-            executeAction(charIDToTypeID("CpFX"), undefined, DialogModes.NO);
+            executeAction(IDs.CpFX, undefined, DialogModes.NO);
         } catch (e1) {
-            executeAction(stringIDToTypeID("copyEffects"), undefined, DialogModes.NO);
+            executeAction(IDs.copyEffects, undefined, DialogModes.NO);
         }
         return "OK|已成功复制当前图层样式";
     } catch (e) {
@@ -613,11 +689,12 @@ LayerFilter.pasteLayerStyle = function () {
     if (app.documents.length === 0) {
         return "ERR|请先打开一个 Photoshop 文档。";
     }
+    var IDs = LayerFilter.IDs;
     try {
         try {
-            executeAction(charIDToTypeID("PaFX"), undefined, DialogModes.NO);
+            executeAction(IDs.PaFX, undefined, DialogModes.NO);
         } catch (e1) {
-            executeAction(stringIDToTypeID("pasteEffects"), undefined, DialogModes.NO);
+            executeAction(IDs.pasteEffects, undefined, DialogModes.NO);
         }
         return "OK|已将样式粘贴至当前选中的图层";
     } catch (e) {

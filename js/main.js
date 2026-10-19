@@ -15,6 +15,8 @@
         matchFace: true
     };
 
+    var isBusy = false; // Concurrency guard to prevent parallel runs and UI flicker
+
     // DOM Elements
     var queryInput = document.getElementById("query");
     var matchKind = document.getElementById("match-kind");
@@ -56,10 +58,20 @@
         });
     }
 
-    // Direct Type Chip click handlers (点击即直接自动筛选，无需再点确认，类似 PS 原生逻辑)
+    // Direct Type Chip click handlers (with deduplication and debounce guard)
     for (var c = 0; c < typeChips.length; c++) {
         typeChips[c].addEventListener("click", function () {
+            if (isBusy) return;
+
             var selectedType = this.getAttribute("data-type");
+            var currentActiveType = getSelectedLayerType();
+            var mode = currentMode();
+
+            // 若当前已是图层类型模式且点击的是同一个类型，避免重复触发整档全搜
+            if (mode === "type" && currentActiveType === selectedType) {
+                return;
+            }
+
             setSelectedLayerType(selectedType);
 
             // 自动选中“按图层类型筛选”单选框
@@ -86,11 +98,13 @@
     }
     queryInput.addEventListener("input", saveSettings);
 
-    // Keyboard Enter trigger
+    // Keyboard Enter trigger (with concurrency protection)
     queryInput.addEventListener("keydown", function (e) {
         if (e.key === "Enter" || e.keyCode === 13) {
             e.preventDefault();
-            executeAction("select");
+            if (!isBusy) {
+                executeAction("select");
+            }
         }
     });
 
@@ -101,17 +115,24 @@
     btnLock.addEventListener("click", function () { executeAction("lock"); });
     btnGroup.addEventListener("click", function () { executeAction("group"); });
 
-    // Copy Layer Style
-    btnCopyStyle.addEventListener("click", function () {
+    // Deduplicated runner for simple JSX functions (Copy / Paste style)
+    function runSimpleAction(jsxCode, loadingText) {
+        if (isBusy) return;
+
         if (typeof window.__adobe_cep__ === "undefined" || !window.__adobe_cep__.evalScript) {
-            showStatus("离线模式：已复制图层样式", false, true);
+            showStatus("离线测试模式。", false, true);
             return;
         }
 
-        showStatus("正在复制图层样式...", false);
-        window.__adobe_cep__.evalScript("LayerFilter.copyLayerStyle()", function (result) {
+        isBusy = true;
+        setButtonsDisabled(true);
+        showStatus(loadingText, false);
+
+        window.__adobe_cep__.evalScript(jsxCode, function (result) {
+            isBusy = false;
+            setButtonsDisabled(false);
             if (!result || result === "EvalScript error.") {
-                showStatus("Photoshop 未能执行复制图层样式。", true);
+                showStatus("Photoshop 执行失败或脚本异常。", true);
                 return;
             }
             if (result.indexOf("OK|") === 0) {
@@ -122,33 +143,20 @@
                 showStatus(result, true);
             }
         });
+    }
+
+    btnCopyStyle.addEventListener("click", function () {
+        runSimpleAction("LayerFilter.copyLayerStyle()", "正在复制图层样式...");
     });
 
-    // Paste Layer Style
     btnPasteStyle.addEventListener("click", function () {
-        if (typeof window.__adobe_cep__ === "undefined" || !window.__adobe_cep__.evalScript) {
-            showStatus("离线模式：已粘贴图层样式", false, true);
-            return;
-        }
-
-        showStatus("正在粘贴图层样式...", false);
-        window.__adobe_cep__.evalScript("LayerFilter.pasteLayerStyle()", function (result) {
-            if (!result || result === "EvalScript error.") {
-                showStatus("Photoshop 未能执行粘贴图层样式。", true);
-                return;
-            }
-            if (result.indexOf("OK|") === 0) {
-                showStatus(result.substring(3), false, true);
-            } else if (result.indexOf("ERR|") === 0) {
-                showStatus(result.substring(4), true);
-            } else {
-                showStatus(result, true);
-            }
-        });
+        runSimpleAction("LayerFilter.pasteLayerStyle()", "正在粘贴图层样式...");
     });
 
     // Pick active layer name and fill into query
     btnPickName.addEventListener("click", function () {
+        if (isBusy) return;
+
         if (typeof window.__adobe_cep__ === "undefined" || !window.__adobe_cep__.evalScript) {
             queryInput.value = "测试图层名称";
             saveSettings();
@@ -156,8 +164,10 @@
             return;
         }
 
+        isBusy = true;
         showStatus("正在获取当前图层名称...", false);
         window.__adobe_cep__.evalScript("LayerFilter.getActiveLayerName()", function (result) {
+            isBusy = false;
             if (!result || result === "EvalScript error.") {
                 showStatus("Photoshop 未能返回当前图层名称。", true);
                 return;
@@ -296,6 +306,8 @@
     }
 
     function executeAction(actionType) {
+        if (isBusy) return;
+
         var settings = readSettings();
 
         // Validation
@@ -312,9 +324,11 @@
             return;
         }
 
+        // Consistent Regex validation with ignoreCase flag
         if ((settings.mode === "content" || settings.mode === "name" || settings.mode === "group") && settings.matchKind === 3) {
             try {
-                new RegExp(settings.query);
+                var flags = settings.ignoreCase ? "i" : "";
+                new RegExp(settings.query, flags);
             } catch (error) {
                 showStatus("正则表达式语法无效。", true);
                 return;
@@ -322,10 +336,12 @@
         }
 
         saveSettings();
+        isBusy = true;
         setButtonsDisabled(true);
         showStatus("正在筛选与处理...", false);
 
         if (typeof window.__adobe_cep__ === "undefined" || !window.__adobe_cep__.evalScript) {
+            isBusy = false;
             setButtonsDisabled(false);
             showStatus("当前处于离线测试模式 (非 CEP 环境)。", false);
             return;
@@ -338,7 +354,6 @@
             settings.matchKind,
             settings.includeHidden,
             settings.ignoreCase,
-            false, // scopeGroupOnly
             quote(settings.layerType),
             settings.matchFont,
             settings.matchSize,
@@ -347,6 +362,7 @@
         ].join(",") + ")";
 
         window.__adobe_cep__.evalScript(script, function (result) {
+            isBusy = false;
             setButtonsDisabled(false);
             if (!result || result === "EvalScript error.") {
                 showStatus("Photoshop 执行失败或脚本异常。", true);
